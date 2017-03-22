@@ -18,17 +18,78 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Property"
-            android:textSize="36dp"
-            android:layout_gravity="center_horizontal"/>
+        <!--<TextView-->
+        <!--android:layout_width="wrap_content"-->
+        <!--android:layout_height="wrap_content"-->
+        <!--android:text="Property"-->
+        <!--android:textSize="36dp"-->
+        <!--android:layout_gravity="center_horizontal"/>-->
 
         <!--for property price-->
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/type"
+                android:text="Property Type"
+                />
+
+            <Spinner
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/propertySpinner"
+                android:layout_alignRight="@+id/type"
+                android:entries="@array/property_type"/>
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/address"
+                android:hint="Address"
+                android:layout_below="@+id/propertySpinner"
+                android:textSize="20sp"
+                android:layout_marginTop="10dp"
+                android:inputType="textPostalAddress"
+                />
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/city"
+                android:hint="City"
+                android:layout_below="@+id/address"
+                android:textSize="20sp"
+                android:inputType="textPostalAddress"
+                />
+
+            <EditText
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/zip"
+                android:hint="Zipcode"
+                android:layout_below="@+id/city"
+                android:textSize="20sp"
+                android:layout_marginTop="10dp"
+                android:inputType="number"
+                />
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/state"
+                android:layout_below="@id/zip"
+                android:text="Select State"
+                />
+
+            <Spinner
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/stateSpinner"
+                android:layout_below="@id/zip"
+                android:layout_alignRight="@+id/state"
+                android:entries="@array/states"/>
 
             <EditText
                 android:layout_width="match_parent"
@@ -36,9 +97,11 @@
                 android:id="@+id/price"
                 android:hint="Price ($)"
                 android:textSize="20sp"
-                android:layout_marginTop="10dp"
+                android:layout_below="@+id/zip"
+                android:layout_marginTop="20dp"
                 android:inputType="number"
                 />
+
 
             <EditText
                 android:layout_width="match_parent"
@@ -47,7 +110,7 @@
                 android:layout_below="@+id/price"
                 android:hint="Down Payment ($)"
                 android:textSize="20sp"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="2dp"
                 android:inputType="number"
                 />
 
@@ -58,7 +121,7 @@
                 android:layout_below="@+id/downpayment"
                 android:hint="APR (Annual Percentage Rate)"
                 android:textSize="20sp"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="2dp"
                 android:inputType="numberDecimal"
                 />
 
@@ -68,32 +131,32 @@
                 android:layout_below="@+id/apr"
                 android:id="@+id/linearRadio">
                 <RadioGroup
-                    android:id="@+id/radioSex"
+                    android:id="@+id/radioTerm"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="20sp"
+                    android:layout_marginTop="2sp"
                     android:orientation="horizontal">
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Terms"
-                            android:textSize="20sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Terms"
+                        android:textSize="20sp"/>
 
-                        <RadioButton
-                            android:id="@+id/term1"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="15 yrs."
-                            android:layout_marginLeft="20dp"
-                            android:checked="true" />
+                    <RadioButton
+                        android:id="@+id/term1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="15 yrs."
+                        android:layout_marginLeft="20dp"
+                        android:checked="true" />
 
-                        <RadioButton
-                            android:id="@+id/term2"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginLeft="20dp"
-                            android:text="30 yrs." />
+                    <RadioButton
+                        android:id="@+id/term2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="20dp"
+                        android:text="30 yrs." />
 
                 </RadioGroup>
 
@@ -104,7 +167,7 @@
                 android:layout_height="wrap_content"
                 android:text="Calculate"
                 android:background="#5cb85c"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="15dp"
                 android:id="@+id/calculate"
                 android:gravity="center"
                 android:layout_centerHorizontal="true"
@@ -117,25 +180,50 @@
                 android:layout_height="wrap_content"
                 android:layout_below="@+id/calculate"
                 android:orientation="horizontal"
-                android:layout_marginTop="30dp"
+                android:layout_marginTop="5dp"
                 android:gravity="center_horizontal"
-                android:id="@+id/linearCalculateValue">
+                android:id="@+id/linearLoanValue">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Monthly Payment:"/>
+                    android:text="Loan:"/>
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:id="@+id/mortgageValue"
+                    android:id="@+id/loanAmount"
                     android:layout_centerHorizontal="true"
-                    android:textSize="28sp"
+                    android:textSize="20sp"
                     android:textColor="#db2e2e"
                     android:layout_marginLeft="10dp"
-                    android:layout_marginTop="4dp"
-                    android:text="$1000"/>
+                    android:layout_marginTop="2dp"
+                    android:text="0"/>
             </LinearLayout>
+
+            <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/linearLoanValue"
+            android:orientation="horizontal"
+            android:layout_marginTop="5dp"
+            android:gravity="center_horizontal"
+            android:id="@+id/linearCalculateValue">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Monthly Payment:"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/monthlyPayment"
+                android:layout_centerHorizontal="true"
+                android:textSize="20sp"
+                android:textColor="#db2e2e"
+                android:layout_marginLeft="10dp"
+                android:layout_marginTop="2dp"
+                android:text="0"/>
+        </LinearLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -146,7 +234,7 @@
 
 
                 <Button
-                    android:layout_width="150dp"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
                     android:text="Save"
                     android:background="#5bc0de"
@@ -160,7 +248,7 @@
 
 
                 <Button
-                    android:layout_width="150dp"
+                    android:layout_width="120dp"
                     android:layout_height="wrap_content"
                     android:text="Reset"
                     android:background="#d9534f"
