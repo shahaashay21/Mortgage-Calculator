@@ -2,6 +2,7 @@ package smartapp.mortgagecalculator;
 
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -18,10 +19,26 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class CalculationActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -36,7 +53,17 @@ public class CalculationActivity extends AppCompatActivity
     Button save;
     Button reset;
     Integer years;
+    EditText address, city, state, zip;
+    private Spinner propertyspinner, statespinner;
 
+    String addressString;
+    String cityString;
+    String zipString;
+    String stateSpinnerString;
+    String propertyTypeString;
+
+    String finalAddress;
+    double[] latlng;
 
     BigDecimal propertyPriceValue;
     BigDecimal downPaymentValue;
@@ -80,33 +107,46 @@ public class CalculationActivity extends AppCompatActivity
         save = (Button) findViewById(R.id.save);
         reset = (Button) findViewById(R.id.reset);
 
+        address = (EditText) findViewById(R.id.address);
+        city = (EditText) findViewById(R.id.city);
+        zip = (EditText) findViewById(R.id.zip);
+        statespinner = (Spinner) findViewById(R.id.stateSpinner);
+        propertyspinner = (Spinner) findViewById(R.id.propertySpinner);
+
+
+
 
         //Click on calculation button
         calculation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int selectedTermId = term.getCheckedRadioButtonId();
-                Button termValue = (Button) findViewById(selectedTermId);
-                if(termValue.getText().equals("15 yrs.")){
-                    years = 15;
-                }else if(termValue.getText().equals("30 yrs.")){
-                    years = 30;
-                }
-                //Null field validation
-                if(nullFieldValidation()) {
-                    //Get all the values in respective data types
-                    setValues();
+                if(true) {
+                    Intent i = new Intent(getApplicationContext(), MapLocation.class);
+                    startActivity(i);
+                }else {
+                    int selectedTermId = term.getCheckedRadioButtonId();
+                    Button termValue = (Button) findViewById(selectedTermId);
+                    if (termValue.getText().equals("15 yrs.")) {
+                        years = 15;
+                    } else if (termValue.getText().equals("30 yrs.")) {
+                        years = 30;
+                    }
+                    //Null field validation
+                    if (nullFieldValidation()) {
+                        //Get all the values in respective data types
+                        setValues();
 
-                    //Validate each fields
-                    if (fieldValidation()) {
-                        //Calculate and show
-                        BigDecimal[] loanMonthlyPayment = calculate();
-                        loanAmount.setText("$"+String.valueOf(loanMonthlyPayment[0]));
-                        monthlyPayment.setText("$"+String.valueOf(loanMonthlyPayment[1]));
+                        //Validate each fields
+                        if (fieldValidation()) {
+                            //Calculate and show
+                            BigDecimal[] loanMonthlyPayment = calculate();
+                            loanAmount.setText("$" + String.valueOf(loanMonthlyPayment[0]));
+                            monthlyPayment.setText("$" + String.valueOf(loanMonthlyPayment[1]));
 
 
-                        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-                        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+                        }
                     }
                 }
             }
@@ -116,7 +156,42 @@ public class CalculationActivity extends AppCompatActivity
         save.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                alertDialog("Missing", "HEYY");
+//                Intent i = new Intent(getApplicationContext(), MapLocation.class);
+//                startActivity(i);
+                if(nullFieldAddressValidation()){
+                    Log.d("Location", "Valid Field");
+
+                    Log.d("finalAddress", finalAddress);
+
+                    LocationInfo locationInfo = (LocationInfo) new LocationInfo().execute(finalAddress);
+
+                    try {
+                        JSONObject res = (JSONObject) locationInfo.get();
+                        locationInfo.get(1000, TimeUnit.MILLISECONDS);
+                        if (false == checkResults(res)) {
+                            alertDialog("Wrong", "Address information is invalid!");
+                            return;
+                        }
+//                        Valid Address
+                        latlng = getLatLong(res);
+
+                        saveData();
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        return;
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException e) {
+                        e.printStackTrace();
+                    }
+//                    JSONObject locationInfo = getLocationInfo(finalAddress);
+//                    if(getLatLong(locationInfo)){
+//                        Log.d("Location", "Valid Location");
+//                    }
+                }
             }
         });
 
@@ -209,6 +284,140 @@ public class CalculationActivity extends AppCompatActivity
 
         builder.create().show();
     }
+
+    //Null Field Validation for Address
+    public boolean nullFieldAddressValidation(){
+
+        //Set String of Address
+        addressString = String.valueOf(address.getText());
+        cityString = String.valueOf(city.getText());
+        zipString = String.valueOf(zip.getText());
+        stateSpinnerString = statespinner.getSelectedItem().toString();
+        propertyTypeString = propertyspinner.getSelectedItem().toString();
+
+        if(addressString.length() == 0){
+            alertDialog("Missing", "Please provide Address");
+            return false;
+        }
+
+        if(cityString.length() == 0){
+            alertDialog("Missing", "Please provide City details");
+            return false;
+        }
+
+        if(stateSpinnerString.length() == 0){
+            alertDialog("Missing", "Please provide State details");
+            return false;
+        }
+
+        if(zipString.length() == 0){
+            alertDialog("Missing", "Please provide Zipcode");
+            return false;
+        }
+
+        addressString = addressString.replace(" ", "%20");
+        cityString = cityString.replace(" ", "%20");
+
+        finalAddress = addressString + "+" + cityString + "+" + stateSpinnerString + "+" + zipString;
+
+        return true;
+    }
+
+
+    public JSONObject getLocationInfo(String finalAddress) {
+        StringBuilder stringBuilder = new StringBuilder();
+        try {
+
+            finalAddress = finalAddress.replaceAll(" ","%20");
+
+            HttpPost httppost = new HttpPost("http://maps.google.com/maps/api/geocode/json?address=" + finalAddress + "&sensor=false");
+            HttpClient client = new DefaultHttpClient();
+            HttpResponse response;
+            stringBuilder = new StringBuilder();
+
+
+            response = client.execute(httppost);
+            HttpEntity entity = response.getEntity();
+            InputStream stream = entity.getContent();
+            int b;
+            while ((b = stream.read()) != -1) {
+                stringBuilder.append((char) b);
+            }
+        } catch (ClientProtocolException e) {
+
+        } catch (IOException e) {
+
+        }
+
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject = new JSONObject(stringBuilder.toString());
+        } catch (JSONException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        return jsonObject;
+    }
+
+    public double[] getLatLong(JSONObject jsonObject) {
+
+        double longitute;
+        double latitude;
+        try {
+
+            longitute = ((JSONArray) jsonObject.get("results")).getJSONObject(0)
+                    .getJSONObject("geometry").getJSONObject("location")
+                    .getDouble("lng");
+
+            latitude = ((JSONArray)jsonObject.get("results")).getJSONObject(0)
+                    .getJSONObject("geometry").getJSONObject("location")
+                    .getDouble("lat");
+
+            double[] returnlatlng = new double[2];
+            returnlatlng[0] = latitude;
+            returnlatlng[1] = longitute;
+
+            return returnlatlng;
+        } catch (JSONException e) {
+
+        }
+
+        return null;
+    }
+
+
+    private boolean checkResults(JSONObject res) throws JSONException{
+        JSONArray addressComponents = null;
+        int i = 0;
+        System.out.println(res.getString("status"));
+
+        if (!res.getString("status").equals("OK")) {return false;}
+
+        addressComponents = res.getJSONArray("results").getJSONObject(0).getJSONArray("address_components");
+        for (i = 0; i < addressComponents.length(); i++) {
+            System.out.println(addressComponents.getJSONObject(i).get("types"));
+            String types = (String) addressComponents.getJSONObject(i).getJSONArray("types").get(0);
+
+            if (types.equals("postal_code")) {
+                System.out.println(addressComponents.getJSONObject(i).getString("long_name"));
+                if (addressComponents.getJSONObject(i).getString("long_name").equals(zipString)) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public void saveData(){
+        
+    }
+
+
+
 
     @Override
     public void onBackPressed() {

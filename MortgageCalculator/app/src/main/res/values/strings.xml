@@ -63,4 +63,6 @@
         <item>Wisconsin</item>
         <item>Wyoming</item>
     </string-array>
+    <string name="title_activity_map_location">Map</string>
+    <string name="google_address_api">AIzaSyACByd8jav3N-zIgGjRnl1K_EcKp1Z5Jec</string>
 </resources>
