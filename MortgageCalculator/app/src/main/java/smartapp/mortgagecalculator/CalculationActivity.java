@@ -3,6 +3,7 @@ package smartapp.mortgagecalculator;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -22,6 +23,8 @@ import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -34,8 +37,12 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -68,6 +75,13 @@ public class CalculationActivity extends AppCompatActivity
     BigDecimal propertyPriceValue;
     BigDecimal downPaymentValue;
     BigDecimal aprValue;
+    BigDecimal loanValue;
+    BigDecimal aprMonthlyValue;
+    BigDecimal finalMonthlyPayment;
+
+    private SharedPreferences sharedPreferences = null;
+    private static final String sharedPref = "MY_SHARED_PREF";
+    HashMap<Integer, LocationInfoObject> addressList = new HashMap<>();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -114,39 +128,39 @@ public class CalculationActivity extends AppCompatActivity
         propertyspinner = (Spinner) findViewById(R.id.propertySpinner);
 
 
+        save.setVisibility(View.GONE);
+        reset.setVisibility(View.GONE);
 
 
         //Click on calculation button
         calculation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(true) {
-                    Intent i = new Intent(getApplicationContext(), MapLocation.class);
-                    startActivity(i);
-                }else {
-                    int selectedTermId = term.getCheckedRadioButtonId();
-                    Button termValue = (Button) findViewById(selectedTermId);
-                    if (termValue.getText().equals("15 yrs.")) {
-                        years = 15;
-                    } else if (termValue.getText().equals("30 yrs.")) {
-                        years = 30;
-                    }
-                    //Null field validation
-                    if (nullFieldValidation()) {
-                        //Get all the values in respective data types
-                        setValues();
+                int selectedTermId = term.getCheckedRadioButtonId();
+                Button termValue = (Button) findViewById(selectedTermId);
+                if (termValue.getText().equals("15 yrs.")) {
+                    years = 15;
+                } else if (termValue.getText().equals("30 yrs.")) {
+                    years = 30;
+                }
+                //Null field validation
+                if (nullFieldValidation()) {
+                    //Get all the values in respective data types
+                    setValues();
 
-                        //Validate each fields
-                        if (fieldValidation()) {
-                            //Calculate and show
-                            BigDecimal[] loanMonthlyPayment = calculate();
-                            loanAmount.setText("$" + String.valueOf(loanMonthlyPayment[0]));
-                            monthlyPayment.setText("$" + String.valueOf(loanMonthlyPayment[1]));
+                    //Validate each fields
+                    if (fieldValidation()) {
+                        //Calculate and show
+                        BigDecimal[] loanMonthlyPayment = calculate();
+                        loanAmount.setText("$" + String.valueOf(loanMonthlyPayment[0]));
+                        monthlyPayment.setText("$" + String.valueOf(loanMonthlyPayment[1]));
 
 
-                            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-                            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
-                        }
+                        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+                        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+
+                        save.setVisibility(View.VISIBLE);
+                        reset.setVisibility(View.VISIBLE);
                     }
                 }
             }
@@ -156,8 +170,6 @@ public class CalculationActivity extends AppCompatActivity
         save.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-//                Intent i = new Intent(getApplicationContext(), MapLocation.class);
-//                startActivity(i);
                 if(nullFieldAddressValidation()){
                     Log.d("Location", "Valid Field");
 
@@ -177,6 +189,9 @@ public class CalculationActivity extends AppCompatActivity
 
                         saveData();
 
+                        Intent i = new Intent(getApplicationContext(), MapLocation.class);
+                        startActivity(i);
+
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                         return;
@@ -187,10 +202,6 @@ public class CalculationActivity extends AppCompatActivity
                     } catch (TimeoutException e) {
                         e.printStackTrace();
                     }
-//                    JSONObject locationInfo = getLocationInfo(finalAddress);
-//                    if(getLatLong(locationInfo)){
-//                        Log.d("Location", "Valid Location");
-//                    }
                 }
             }
         });
@@ -203,6 +214,9 @@ public class CalculationActivity extends AppCompatActivity
                 downPayment.setText("");
                 apr.setText("");
                 monthlyPayment.setText("0");
+                address.setText("");
+                city.setText("");
+                zip.setText("");
             }
         });
 
@@ -245,8 +259,8 @@ public class CalculationActivity extends AppCompatActivity
     //Calculate
     private BigDecimal[] calculate(){
 
-        BigDecimal loanValue = propertyPriceValue.subtract(downPaymentValue);
-        BigDecimal aprMonthlyValue = aprValue.divide(new BigDecimal("1200"));
+        loanValue = propertyPriceValue.subtract(downPaymentValue);
+        aprMonthlyValue = aprValue.divide(new BigDecimal("1200"), 4, BigDecimal.ROUND_HALF_UP);
         int months = years * 12;
 
         BigDecimal pow = new BigDecimal(Math.pow(1+(aprMonthlyValue.doubleValue()), months));
@@ -257,7 +271,8 @@ public class CalculationActivity extends AppCompatActivity
 
         BigDecimal[] returnValue = new BigDecimal[2];
         returnValue[0] = loanValue;
-        returnValue[1] = monthlyPayment.setScale(0, RoundingMode.HALF_UP);
+        finalMonthlyPayment = monthlyPayment.setScale(0, RoundingMode.HALF_UP);
+        returnValue[1] = finalMonthlyPayment;
         return returnValue;
     }
 
@@ -413,8 +428,45 @@ public class CalculationActivity extends AppCompatActivity
     }
 
     public void saveData(){
-        
+        SharedPreferences sharedPreferences = getSharedPreferences(sharedPref,MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+
+        Random random = new Random();
+        int tempKey;
+        //generate unique key
+        while (true) {
+            tempKey = random.nextInt(200);
+            boolean eq = false;
+            Map<String, ?> allEntries = sharedPreferences.getAll();
+            for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+                String key = entry.getKey();
+                if (key.equals(String.valueOf(tempKey))) {
+                    eq = true;
+                }
+            }
+            if(!eq){
+                break;
+            }
+        }
+        Log.d("Key", String.valueOf(tempKey));
+
+        LocationInfoObject data = getObject();
+        data.setId(String.valueOf(tempKey));
+        Gson gson = new Gson();
+        String json = gson.toJson(data);
+        editor.putString(String.valueOf(tempKey), json);
+        editor.commit();
+
     }
+
+    public LocationInfoObject getObject(){
+        addressString = addressString.replace("%20", " ");
+        cityString = cityString.replace("%20", " ");
+        LocationInfoObject obj = new LocationInfoObject(propertyPriceValue.toString(), downPaymentValue.toString(), aprValue.toString(), years.toString(), loanValue.toString(), finalMonthlyPayment.toString(), addressString, propertyTypeString, cityString, zipString, stateSpinnerString, String.valueOf(latlng[0]), String.valueOf(latlng[1]));
+        return obj;
+    }
+
+
 
 
 
@@ -457,18 +509,11 @@ public class CalculationActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
+        if (id == R.id.property) {
             // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+        } else if (id == R.id.map) {
+            Intent i = new Intent(getApplicationContext(), MapLocation.class);
+            startActivity(i);
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
